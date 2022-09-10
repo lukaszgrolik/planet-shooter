@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEditor;
 
 public interface IGameplayManagerPrefabs
 {
@@ -56,5 +57,16 @@ public class GameManager : MonoBehaviour, IGameplayManagerPrefabs
         var lapTimeStr = lap.GetLapTime().ToString("F2");
 
         Debug.Log($"lap #{lap.index + 1} finished ({lapTimeStr}s){lapRecordStr}");
+    }
+
+    void OnDrawGizmos()
+    {
+        if (race != null && race.RecordLap != null && race.Laps.Count > 0)
+        {
+            var splitTime = race.GetSplitTime();
+            var splitTimeStr = (splitTime > 0 ? "+" : "" ) + splitTime.ToString("F2") + "s";
+
+            Handles.Label(Vector2.zero + Vector2.up, splitTimeStr);
+        }
     }
 }

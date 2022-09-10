@@ -10,21 +10,71 @@ using UnityEngine;
 //     }
 // }
 
-class RaceLap
+class RaceLapSector
 {
     public readonly int index;
     public readonly float startTime;
+    public readonly float prevSectorsSummedTime;
     private float endTime = 0;
 
-    public RaceLap(int index, float startTime)
+    public RaceLapSector(int index, float startTime, float prevSectorsSummedTime)
     {
         this.index = index;
         this.startTime = startTime;
+        this.prevSectorsSummedTime = prevSectorsSummedTime;
     }
 
     public void Finish(float endTime)
     {
         this.endTime = endTime;
+    }
+
+    public bool IsFinished()
+    {
+        return this.endTime > 0;
+    }
+
+    public float GetSectorTime()
+    {
+        if (endTime == 0) return 0;
+
+        return endTime - startTime;
+    }
+
+    public float GetSectorSummedTime()
+    {
+        if (endTime == 0) return 0;
+
+        return prevSectorsSummedTime + GetSectorTime();
+    }
+}
+
+class RaceLap
+{
+    public readonly Race race;
+    public readonly int index;
+    public readonly float startTime;
+    private float endTime = 0;
+    private List<RaceLapSector> sectors = new List<RaceLapSector>(); public IReadOnlyList<RaceLapSector> Sectors => sectors;
+
+    public RaceLap(Race race, int index, float startTime)
+    {
+        this.race = race;
+        this.index = index;
+        this.startTime = startTime;
+
+        sectors.Add(new RaceLapSector(0, startTime, 0));
+
+        race.checkpointHit += OnCheckpointHit;
+    }
+
+    public void Finish(float endTime)
+    {
+        this.endTime = endTime;
+
+        race.checkpointHit -= OnCheckpointHit;
+
+        sectors[sectors.Count - 1].Finish(endTime);
     }
 
     public bool IsFinished()
@@ -38,6 +88,15 @@ class RaceLap
 
         return endTime - startTime;
     }
+
+    void OnCheckpointHit(int cpIndex)
+    {
+        var timeNow = Time.time;
+
+        var prevSector = sectors[sectors.Count - 1];
+        prevSector.Finish(timeNow);
+        sectors.Add(new RaceLapSector(cpIndex, timeNow, prevSector.GetSectorSummedTime()));
+    }
 }
 
 class Race
@@ -45,7 +104,7 @@ class Race
     private Track track; public Track Track => track;
 
     private float startTime;
-    private List<RaceLap> laps = new List<RaceLap>();
+    private List<RaceLap> laps = new List<RaceLap>(); public IReadOnlyList<RaceLap> Laps => laps;
 
     private RaceLap currentLap;
     private RaceLap recordLap; public RaceLap RecordLap => recordLap;
@@ -77,7 +136,7 @@ class Race
         }
 
         var prevLap = currentLap;
-        var newLap = new RaceLap(laps.Count, timeNow);
+        var newLap = new RaceLap(this, laps.Count, timeNow);
         currentLap = newLap;
 
         laps.Add(newLap);
@@ -107,6 +166,21 @@ class Race
                 StartNewLap();
             }
         }
+    }
+
+    float GetSectorSplitTime(RaceLap lap, int sectorIndex)
+    {
+        if (recordLap == null) return 0;
+
+        return lap.Sectors[sectorIndex].GetSectorSummedTime() - recordLap.Sectors[sectorIndex].GetSectorSummedTime();
+    }
+
+    public float GetSplitTime()
+    {
+        var cpIndex = track.Checkpoints.IndexOf(lastCheckpoint);
+        if (cpIndex == 0) return 0;
+
+        return GetSectorSplitTime(currentLap, cpIndex - 1);
     }
 }
 
