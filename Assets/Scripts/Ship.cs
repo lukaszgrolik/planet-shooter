@@ -3,7 +3,12 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 
-public class Ship : MonoBehaviour
+public interface IShipSpeed
+{
+    float Speed { get; }
+}
+
+public class Ship : MonoBehaviour, IShipSpeed
 {
     private Rigidbody2D rb;
 
@@ -23,7 +28,7 @@ public class Ship : MonoBehaviour
 
     private Vector2 lastPos = Vector2.zero;
     private float deltaDistance = 0;
-    private float deltaVelocity = 0;
+    private float deltaVelocity = 0; public float Speed => deltaVelocity;
 
     public void Setup(IGameplayManagerPrefabs gameplayManager) {
         rb = GetComponent<Rigidbody2D>();
@@ -95,7 +100,7 @@ public class Ship : MonoBehaviour
         proj.Setup(speed: projectileSpeed);
     }
 
-    float MpsToKmph(float mps)
+    static public float MpsToKmph(float mps)
     {
         return mps / (1000f / 3600f);
     }

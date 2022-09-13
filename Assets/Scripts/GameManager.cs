@@ -15,6 +15,8 @@ public class GameManager : MonoBehaviour, IGameplayManagerPrefabs
     [SerializeField] private Camera mainCamera;
     [SerializeField] private GameObject projectilePrefab; public GameObject ProjectilePrefab => projectilePrefab;
 
+    private GameUI gameUI;
+
     [SerializeField] private Ship ship;
 
     private Race race;
@@ -27,6 +29,9 @@ public class GameManager : MonoBehaviour, IGameplayManagerPrefabs
         playerController.Setup(ship);
 
         ship.Setup(this);
+
+        gameUI = GetComponentInChildren<GameUI>();
+
     }
 
     void Start()
@@ -39,6 +44,16 @@ public class GameManager : MonoBehaviour, IGameplayManagerPrefabs
         race.checkpointHit += OnRaceCheckpointHit;
         race.lapStarted += OnRaceLapStarted;
         race.lapFinished += OnRaceLapFinished;
+
+        gameUI.Setup(
+            ship: ship,
+            race: race
+        );
+    }
+
+    void Update()
+    {
+        gameUI.OnUpdate();
     }
 
     void OnRaceCheckpointHit(int cpIndex)
@@ -61,12 +76,12 @@ public class GameManager : MonoBehaviour, IGameplayManagerPrefabs
 
     void OnDrawGizmos()
     {
-        if (race != null && race.RecordLap != null && race.Laps.Count > 0)
-        {
-            var splitTime = race.GetSplitTime();
-            var splitTimeStr = (splitTime > 0 ? "+" : "" ) + splitTime.ToString("F2") + "s";
+        // if (race != null && race.RecordLap != null && race.Laps.Count > 0)
+        // {
+        //     var splitTime = race.GetSplitTime();
+        //     var splitTimeStr = (splitTime > 0 ? "+" : "" ) + splitTime.ToString("F2") + "s";
 
-            Handles.Label(Vector2.zero + Vector2.up, splitTimeStr);
-        }
+        //     Handles.Label(Vector2.zero + Vector2.up, splitTimeStr);
+        // }
     }
 }

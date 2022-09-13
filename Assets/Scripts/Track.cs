@@ -10,7 +10,7 @@ using UnityEngine;
 //     }
 // }
 
-class RaceLapSector
+public class RaceLapSector
 {
     public readonly int index;
     public readonly float startTime;
@@ -49,7 +49,7 @@ class RaceLapSector
     }
 }
 
-class RaceLap
+public class RaceLap
 {
     public readonly Race race;
     public readonly int index;
@@ -99,20 +99,22 @@ class RaceLap
     }
 }
 
-class Race
+public class Race
 {
     private Track track; public Track Track => track;
 
     private float startTime;
     private List<RaceLap> laps = new List<RaceLap>(); public IReadOnlyList<RaceLap> Laps => laps;
 
-    private RaceLap currentLap;
+    private RaceLap currentLap; public RaceLap CurrentLap => currentLap;
     private RaceLap recordLap; public RaceLap RecordLap => recordLap;
     private TrackCheckpointLine lastCheckpoint;
 
     public event System.Action<RaceLap, RaceLap> lapStarted;
     public event System.Action<RaceLap> lapFinished;
     public event System.Action<int> checkpointHit;
+    // @todo currently needed for UI as checkpointHit is used in RaceLap and there's a race conditions issue - RaceLap should be changed by Race directly
+    public event System.Action<int> lapSectorStarted;
 
     public Race(Track track)
     {
@@ -159,7 +161,9 @@ class Race
         {
             lastCheckpoint = trackCheckpointLine;
 
-            checkpointHit?.Invoke(track.Checkpoints.IndexOf(trackCheckpointLine));
+            var cpIndex = track.Checkpoints.IndexOf(trackCheckpointLine);
+            checkpointHit?.Invoke(cpIndex);
+            lapSectorStarted?.Invoke(cpIndex);
 
             if (track.IsStartFinishLine(trackCheckpointLine))
             {
@@ -172,15 +176,25 @@ class Race
     {
         if (recordLap == null) return 0;
 
-        return lap.Sectors[sectorIndex].GetSectorSummedTime() - recordLap.Sectors[sectorIndex].GetSectorSummedTime();
+        var lapSectorSummedTime = lap.Sectors[sectorIndex].GetSectorSummedTime();
+        var recordLapSectorSummedTime = recordLap.Sectors[sectorIndex].GetSectorSummedTime();
+
+        // Debug.Log($"{lapSectorSummedTime} | {recordLapSectorSummedTime}");
+
+        return lapSectorSummedTime - recordLapSectorSummedTime;
     }
 
     public float GetSplitTime()
     {
         var cpIndex = track.Checkpoints.IndexOf(lastCheckpoint);
-        if (cpIndex == 0) return 0;
-
-        return GetSectorSplitTime(currentLap, cpIndex - 1);
+        if (cpIndex == 0)
+        {
+            return GetSectorSplitTime(Laps[Laps.Count - 1], track.Checkpoints.Count - 1);
+        }
+        else
+        {
+            return GetSectorSplitTime(currentLap, cpIndex - 1);
+        }
     }
 }
 
