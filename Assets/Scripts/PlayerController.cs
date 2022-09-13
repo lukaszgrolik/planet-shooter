@@ -21,8 +21,11 @@ public class PlayerController : MonoBehaviour
             ship.Rotate(-Time.deltaTime);
         }
 
-        if (Input.GetKey(KeyCode.W)) {
-            ship.Thrust();
+        if (Input.GetKeyDown(KeyCode.W)) {
+            ship.ThrustStart();
+        }
+        else if (Input.GetKeyUp(KeyCode.W)) {
+            ship.ThrustEnd();
         }
 
         if (Input.GetKey(KeyCode.S)) {

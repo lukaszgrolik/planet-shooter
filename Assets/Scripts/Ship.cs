@@ -16,12 +16,13 @@ public class Ship : MonoBehaviour, IShipSpeed
 
     [SerializeField] private Transform shootingPoint;
 
-    [SerializeField] private float rotationSpeed = 1f;
-    [SerializeField] private float thrustStrength = 1f;
+    [SerializeField] private float rotationSpeed = 200f;
+    [SerializeField] private float velocityRotationSpeed = 200f;
+    [SerializeField] private float thrustStrength = 20f;
     [SerializeField] private float brakeStrength = 1f;
     [SerializeField] private float shootingRate = 5f;
     [SerializeField] private float projectileSpeed = 10f;
-    // [SerializeField] private float friction = .1f;
+    [SerializeField] private float friction = .01f;
 
     private bool shootingEnabled = false;
     private float lastShotTime = -1;
@@ -29,6 +30,8 @@ public class Ship : MonoBehaviour, IShipSpeed
     private Vector2 lastPos = Vector2.zero;
     private float deltaDistance = 0;
     private float deltaVelocity = 0; public float Speed => deltaVelocity;
+
+    private bool isThrusting = false;
 
     public void Setup(IGameplayManagerPrefabs gameplayManager) {
         rb = GetComponent<Rigidbody2D>();
@@ -45,8 +48,15 @@ public class Ship : MonoBehaviour, IShipSpeed
     // // Update is called once per frame
     void Update()
     {
+        // friction 0.005 when parallel to velocity vector, 0.01 when rotated 90deg
         // rb.velocity -= Vector2.one * friction;
         // if (rb.velocity.x <= 0 || rb.velocity.y <= 0) rb.velocity = new Vector2(Mathf.Max(rb.velocity.x, 0), Mathf.Max(rb.velocity.y, 0));
+        rb.velocity *= (1 - friction);
+
+        if (isThrusting)
+        {
+            Thrust();
+        }
 
         if (shootingEnabled && Time.time - lastShotTime >= 1 / shootingRate) {
             Shoot();
@@ -64,11 +74,32 @@ public class Ship : MonoBehaviour, IShipSpeed
         lastPos = transform.position;
     }
 
-    public void Rotate(float angle) {
-        transform.Rotate(new Vector3(0, 0, angle * rotationSpeed));
+    public Vector2 Rotate(Vector2 v, float delta)
+    {
+        return new Vector2(
+            v.x * Mathf.Cos(delta) - v.y * Mathf.Sin(delta),
+            v.x * Mathf.Sin(delta) + v.y * Mathf.Cos(delta)
+        );
     }
 
-    public void Thrust() {
+    public void Rotate(float angle) {
+        var rotZ = angle * rotationSpeed;
+        var rotVec = new Vector3(0, 0, rotZ);
+
+        transform.Rotate(rotVec);
+        // rb.velocity *= Quaternion.Euler(0, 0, rotZ);
+        rb.velocity = Rotate(rb.velocity, angle * velocityRotationSpeed * Mathf.Deg2Rad);
+    }
+
+    public void ThrustStart() {
+        isThrusting = true;
+    }
+
+    public void ThrustEnd() {
+        isThrusting = false;
+    }
+
+    void Thrust() {
         rb.AddForce(transform.up.normalized * thrustStrength);
     }
 
